@@ -1,0 +1,25 @@
+{
+  "name": "secure-auth-api",
+  "version": "1.0.0",
+  "description": "API d’authentification sécurisée basée sur Node.js, Express, JWT et Redis. Elle gère l’inscription, la connexion, les tokens d’accès et de rafraîchissement, la révocation, le logging et la protection brute-force. Conçue pour être réutilisable entre plusieurs projets avec Docker et Nginx (HTTPS).",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.19.1",
+    "morgan": "^1.10.1",
+    "redis": "^5.8.3"
+  }
+}

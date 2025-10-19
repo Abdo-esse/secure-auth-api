@@ -1,0 +1,57 @@
+version: "3.9"
+
+services:
+  auth:
+    build: .
+    container_name: auth-service
+    restart: always
+    env_file: .env
+    secrets:
+      - jwt_private.pem
+      - jwt_public.pem
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - backend
+
+  mongo:
+    image: mongo:7
+    container_name: mongo
+    restart: always
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - backend
+
+  redis:
+    image: redis:7
+    container_name: redis
+    restart: always
+    networks:
+      - backend
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    depends_on:
+      - auth
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      - ./certs:/etc/ssl/certs
+    networks:
+      - backend
+
+secrets:
+  jwt_private.pem:
+    file: ./secrets/jwt_private.pem
+  jwt_public.pem:
+    file: ./secrets/jwt_public.pem
+
+volumes:
+  mongo_data:
+
+networks:
+  backend:
