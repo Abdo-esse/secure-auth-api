@@ -80,29 +80,59 @@ exports.login = async (req, res) => {
 exports.refreshToken = async (req, res) => {
   try {
     const refreshToken = req.cookies.refresh_token;
-    if (!refreshToken) return res.status(401).json({ message: "Aucun refresh token" });
+    if (!refreshToken)
+      return res.status(401).json({ message: "Aucun refresh token fourni" });
 
+    // Vérifie si le token est stocké en base (non révoqué)
     const stored = await RefreshToken.findOne({ token: refreshToken });
-    if (!stored) return res.status(403).json({ message: "Refresh token invalide" });
+    if (!stored)
+      return res.status(403).json({ message: "Refresh token invalide ou révoqué" });
 
     const publicKey = fs.readFileSync(process.env.JWT_PUBLIC_KEY_PATH);
-    const decoded = jwt.verify(refreshToken, publicKey, { algorithms: [process.env.JWT_ALGO] });
 
+    let decoded;
+    try {
+      decoded = jwt.verify(refreshToken, publicKey, {
+        algorithms: [process.env.JWT_ALGO],
+      });
+    } catch (err) {
+      // ✅ Gestion spécifique : refresh token expiré
+      if (err.name === "TokenExpiredError") {
+        logger.warn("Refresh token expiré", err.message);
+        return res.status(401).json({ message: "Refresh token expiré" });
+      }
+
+      // Autres erreurs (signature, format, etc.)
+      logger.warn("Refresh token invalide", err.message);
+      return res.status(403).json({ message: "Refresh token invalide" });
+    }
+
+    // Token décodé mais utilisateur supprimé ?
     const user = await User.findById(decoded.sub);
     if (!user) return res.status(404).json({ message: "Utilisateur introuvable" });
 
+    // Générer un nouveau access token
     const newAccessToken = generateAccessToken(user);
-    logger.info(`Refresh token utilisé pour ${user.email}`);
+
+    logger.info(`Refresh token valide utilisé pour ${user.email}`);
     res.json({ accessToken: newAccessToken });
   } catch (err) {
-    logger.warn("Tentative de refresh token invalide", err.message);
-    res.status(403).json({ message: "Refresh token invalide" });
+    logger.error("Erreur interne lors du refresh token:", err);
+    res.status(500).json({ message: "Erreur interne du serveur" });
   }
 };
 
 exports.logout = async (req, res) => {
   try {
     const refreshToken = req.cookies.refresh_token;
+    const accessToken = req.headers.authorization?.split(" ")[1];
+     // Révoquer l'access token si fourni
+    if (accessToken) {
+      const decoded = jwt.decode(accessToken);
+      if (decoded && decoded.jti) {  // jti = JWT ID
+        await revokeToken(decoded.jti, decoded.exp);
+      }
+    }
     if (refreshToken) {
       await RefreshToken.deleteOne({ token: refreshToken });
       res.clearCookie("refresh_token");

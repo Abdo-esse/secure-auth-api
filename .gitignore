@@ -4,3 +4,5 @@ secrets/
 certs/
 npm-debug.log
 .DS_Store
+
+src/logs/*.log
